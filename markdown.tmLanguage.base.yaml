@@ -10,11 +10,16 @@ repository:
     - {include: '#separator'}
     - {include: '#heading'}
     - {include: '#blockquote'}
+    - {include: '#block-cloze'}
+    - {include: '#theorem'}
+    - {include: '#note'}
+    - {include: '#doc-include'}
     - {include: '#lists'}
     - {include: '#fenced_code_block'}
     - {include: '#raw_block'}
     - {include: '#link-def'}
     - {include: '#html'}
+    # - {include: '#label-and-id'}
     - {include: '#paragraph'}
   blockquote:
     begin: (^|\G)[ ]{0,3}(>) ?
@@ -24,7 +29,100 @@ repository:
     patterns:
     - {include: '#block'}
     while: (^|\G)\s*(>) ?
+  note:
+    begin: '(^|\G)(.*)(::)(.*?)(?:(?: +(@[^\s@\{\}\_\~]+))?(?: +(@@[^\s@\{\}\_\~]+))?\s*)?$'
+    captures:
+      '2': {name: yumd.note.deckname.markdown string.other.note.deckname.markdown markup.bold.markdown}
+      '3': {name: punctuation.definition.markdown}
+      '4': {name: yumd.note.notetype.markdown string.other.note.notetype.markdown markup.italic.markdown}
+      '5': {name: yumd.label.markdown string.other.label.label.markdown comment.block.html}
+      '6': {name: yumd.id.markdown string.other.label.id.markdown markup.italic.markdown comment.block.html}
+    name: markup.note.markdown
+    patterns:
+    - {include: '#block'}
+    while: (^|\G)(\s{2}) ?
+  block-cloze:
+    begin: '(^|\G)\{(?:(?: +(@[^\s@\{\}\_\~]+))?(?: +(@@[^\s@\{\}\_\~]+))?\s*)?$'
+    beginCaptures:
+      '2': {name: yumd.label.markdown string.other.label.label.markdown comment.block.html}
+      '3': {name: yumd.id.markdown string.other.label.id.markdown markup.italic.markdown comment.block.html}
+    end: (^|\G)\}$
+    name: yumd.cloze.markdown yumd.cloze.block.markdown
+    patterns:
+    - {include: '#block'}
+  doc-include:
+    match: ^\[\[(.+)\]\]$
+    captures:
+      '1': {name: yumd.docinclude.path.markdown string.other.docinclude.path.markdown markup.underline.link.markdown}
+    name: yumd.docinclude.block.markdown markup.bold.markdown string.other.docinclude.block.markdown
 {{languageDefinitions}}
+  theorem:
+    match: '(^|\G)(\S*[^\\.])(?:(\.)|\s\((.*[^\\])\)(\.))(?:(?: +(@[^\s@\{\}\_\~]+))?(?: +(@@[^\s@\{\}\_\~]+))?\s*)?$' # sadly unable to make sure that there is a : on the next line, since textmate does not support multiline matches, nor begins requiring ends
+    captures:
+      '2': {name: markup.bold.markdown}
+      '3': {name: markup.bold.markdown}
+      '4': {name: markup.italic.markdown}
+      '5': {name: markup.bold.markdown}
+      '6': {name: yumd.label.markdown string.other.label.label.markdown comment.block.html}
+      '7': {name: yumd.id.markdown string.other.label.id.markdown markup.italic.markdown comment.block.html}
+    name: yumd.theorem.markdown string.other.note.theorem.markdown
+  label-and-id:
+    match: '(?: +(@[^\s@\{\}\_\~]+))?(?: +(@@[^\s@\{\}\_\~]+))?\s*$'
+    captures:
+      '1': {name: yumd.label.markdown string.other.label.label.markdown comment.block.html}
+      '2': {name: yumd.id.markdown string.other.label.id.markdown markup.italic.markdown comment.block.html}
+  inline-cloze:
+    begin: \{
+    end: \}
+    name: yumd.cloze.markdown yumd.cloze.inline.markdown string.other.cloze.inlinecontent.markdown
+    patterns:
+    - {include: '#escape'}
+    - {include: '#ampersand'}
+    - {include: '#bracket'}
+    - {include: '#raw'}
+    - {include: '#bold'}
+    - {include: '#italic'}
+    - {include: '#image-inline'}
+    - {include: '#link-inline'}
+    - {include: '#link-inet'}
+    - {include: '#link-email'}
+    - {include: '#image-ref'}
+    - {include: '#link-ref-literal'}
+    - {include: '#link-ref'}
+    - {include: '#link-ref-shortcut'}
+  link-def:
+    captures:
+      '1': {name: punctuation.definition.constant.markdown}
+      '10': {name: punctuation.definition.string.end.markdown}
+      '11': {name: string.other.link.description.title.markdown}
+      '12': {name: punctuation.definition.string.begin.markdown}
+      '13': {name: punctuation.definition.string.end.markdown}
+      '14': {name: string.other.link.description.title.markdown}
+      '15': {name: punctuation.definition.string.begin.markdown}
+      '16': {name: punctuation.definition.string.end.markdown}
+      '2': {name: constant.other.reference.link.markdown}
+      '3': {name: punctuation.definition.constant.markdown}
+      '4': {name: punctuation.separator.key-value.markdown}
+      '5': {name: punctuation.definition.link.markdown}
+      '6': {name: markup.underline.link.markdown}
+      '7': {name: punctuation.definition.link.markdown}
+      '8': {name: string.other.link.description.title.markdown}
+      '9': {name: punctuation.definition.string.begin.markdown}
+    match: >
+      (?x)
+        \s*            # Leading whitespace
+        (\[)([^]]+?)(\])(:)    # Reference name
+        [ \t]*          # Optional whitespace
+        (<?)(\S+?)(>?)      # The url
+        [ \t]*          # Optional whitespace
+        (?:
+            ((\().+?(\)))    # Match title in parens…
+          | ((").+?("))    # or in double quotes…
+          | ((').+?('))    # or in single quotes.
+        )?            # Title is optional
+        \s*            # Optional whitespace
+        $
+    name: meta.link.reference.def.markdown
   fenced_code_block:
     patterns:
     {{languageIncludes}}
@@ -127,39 +225,6 @@ repository:
       patterns:
       - {include: text.html.derivative}
       while: ^(?!\s*$)
-  link-def:
-    captures:
-      '1': {name: punctuation.definition.constant.markdown}
-      '10': {name: punctuation.definition.string.end.markdown}
-      '11': {name: string.other.link.description.title.markdown}
-      '12': {name: punctuation.definition.string.begin.markdown}
-      '13': {name: punctuation.definition.string.end.markdown}
-      '14': {name: string.other.link.description.title.markdown}
-      '15': {name: punctuation.definition.string.begin.markdown}
-      '16': {name: punctuation.definition.string.end.markdown}
-      '2': {name: constant.other.reference.link.markdown}
-      '3': {name: punctuation.definition.constant.markdown}
-      '4': {name: punctuation.separator.key-value.markdown}
-      '5': {name: punctuation.definition.link.markdown}
-      '6': {name: markup.underline.link.markdown}
-      '7': {name: punctuation.definition.link.markdown}
-      '8': {name: string.other.link.description.title.markdown}
-      '9': {name: punctuation.definition.string.begin.markdown}
-    match: >
-      (?x)
-        \s*            # Leading whitespace
-        (\[)([^]]+?)(\])(:)    # Reference name
-        [ \t]*          # Optional whitespace
-        (<?)(\S+?)(>?)      # The url
-        [ \t]*          # Optional whitespace
-        (?:
-            ((\().+?(\)))    # Match title in parens…
-          | ((").+?("))    # or in double quotes…
-          | ((').+?('))    # or in single quotes.
-        )?            # Title is optional
-        \s*            # Optional whitespace
-        $
-    name: meta.link.reference.def.markdown
   list_paragraph:
     begin: (^|\G)(?=\S)(?![*+->]\s|[0-9]+\.\s)
     name: meta.paragraph.markdown
@@ -171,7 +236,7 @@ repository:
       ]{0,3}[0-9]+\.)
   lists:
     patterns:
-    - begin: (^|\G)([ ]{0,3})([*+-])([ \t])
+    - begin: (^|\G)([ ]{0,3})([*+-:])([ \t])
       beginCaptures:
         '3': {name: punctuation.definition.list.begin.markdown}
       comment: Currently does not support un-indented second lines.
@@ -208,6 +273,7 @@ repository:
   inline:
     patterns:
     - {include: '#ampersand'}
+    - {include: '#inline-cloze'}
     - {include: '#bracket'}
     - {include: '#bold'}
     - {include: '#italic'}
@@ -221,6 +287,7 @@ repository:
     - {include: '#link-ref'}
     - {include: '#link-ref-literal'}
     - {include: '#link-ref-shortcut'}
+    - {include: '#label-and-id'}
   ampersand:
     comment: "Markdown will convert this for us. We match it so that the HTML grammar will not mark it up as invalid."
     match: '&(?!([a-zA-Z0-9]+|#[0-9]+|#x[0-9a-fA-F]+);)'
@@ -278,6 +345,7 @@ repository:
       patterns:
       - {include: text.html.derivative}
     - {include: '#escape'}
+    - {include: '#inline-cloze'}
     - {include: '#ampersand'}
     - {include: '#bracket'}
     - {include: '#raw'}
@@ -394,6 +462,7 @@ repository:
       patterns:
       - {include: text.html.derivative}
     - {include: '#escape'}
+    - {include: '#inline-cloze'}
     - {include: '#ampersand'}
     - {include: '#bracket'}
     - {include: '#raw'}
